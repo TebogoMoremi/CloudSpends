@@ -27,4 +27,12 @@ public interface CostRecordRepository
                     LocalDate endDate,
                     LocalDate startDate
             );
+
+    List<CostRecord>
+            findByCloudResourceCloudAccountIdAndCurrencyAndPeriodStartLessThanEqualAndPeriodEndGreaterThanEqual(
+                    Long cloudAccountId,
+                    CurrencyCode currency,
+                    LocalDate endDate,
+                    LocalDate startDate
+            );
 }

@@ -7,10 +7,12 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 
 import com.tebogo.cloudspend_api.dto.CreateCostRecordRequest;
+import com.tebogo.cloudspend_api.exception.CloudAccountNotFoundException;
 import com.tebogo.cloudspend_api.exception.CloudResourceNotFoundException;
 import com.tebogo.cloudspend_api.model.CloudResource;
 import com.tebogo.cloudspend_api.model.CostRecord;
 import com.tebogo.cloudspend_api.model.CurrencyCode;
+import com.tebogo.cloudspend_api.repository.CloudAccountRepository;
 import com.tebogo.cloudspend_api.repository.CloudResourceRepository;
 import com.tebogo.cloudspend_api.repository.CostRecordRepository;
 
@@ -19,13 +21,16 @@ public class CostRecordService {
 
     private final CostRecordRepository costRecordRepository;
     private final CloudResourceRepository cloudResourceRepository;
+    private final CloudAccountRepository cloudAccountRepository;
 
     public CostRecordService(
             CostRecordRepository costRecordRepository,
-            CloudResourceRepository cloudResourceRepository) {
+            CloudResourceRepository cloudResourceRepository,
+            CloudAccountRepository cloudAccountRepository) {
 
         this.costRecordRepository = costRecordRepository;
         this.cloudResourceRepository = cloudResourceRepository;
+        this.cloudAccountRepository = cloudAccountRepository;
     }
 
     public CostRecord createCost(
@@ -100,6 +105,34 @@ public class CostRecordService {
         return costRecordRepository
                 .findByCloudResourceIdAndCurrencyAndPeriodStartLessThanEqualAndPeriodEndGreaterThanEqual(
                         resourceId,
+                        currency,
+                        endDate,
+                        startDate
+                )
+                .stream()
+                .map(CostRecord::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    public BigDecimal calculateAccountTotal(
+            Long accountId,
+            CurrencyCode currency,
+            LocalDate startDate,
+            LocalDate endDate) {
+
+        if (!cloudAccountRepository.existsById(accountId)) {
+            throw new CloudAccountNotFoundException(accountId);
+        }
+
+        if (endDate.isBefore(startDate)) {
+            throw new IllegalArgumentException(
+                    "End date cannot be before start date"
+            );
+        }
+
+        return costRecordRepository
+                .findByCloudResourceCloudAccountIdAndCurrencyAndPeriodStartLessThanEqualAndPeriodEndGreaterThanEqual(
+                        accountId,
                         currency,
                         endDate,
                         startDate
