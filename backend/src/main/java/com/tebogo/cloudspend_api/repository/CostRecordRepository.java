@@ -6,15 +6,25 @@ import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import com.tebogo.cloudspend_api.model.CostRecord;
+import com.tebogo.cloudspend_api.model.CurrencyCode;
 
 public interface CostRecordRepository
         extends JpaRepository<CostRecord, Long> {
 
-    List<CostRecord> findByCloudResourceId(Long cloudResourceId);
-
-    List<CostRecord> findByCloudResourceIdAndPeriodStartGreaterThanEqualAndPeriodEndLessThanEqual(
-            Long cloudResourceId,
-            LocalDate periodStart,
-            LocalDate periodEnd
+    List<CostRecord> findByCloudResourceId(
+            Long cloudResourceId
     );
+
+    List<CostRecord> findByCloudResourceIdAndCurrency(
+            Long cloudResourceId,
+            CurrencyCode currency
+    );
+
+    List<CostRecord>
+            findByCloudResourceIdAndCurrencyAndPeriodStartLessThanEqualAndPeriodEndGreaterThanEqual(
+                    Long cloudResourceId,
+                    CurrencyCode currency,
+                    LocalDate endDate,
+                    LocalDate startDate
+            );
 }

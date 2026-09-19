@@ -8,6 +8,8 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -28,8 +30,9 @@ public class CostRecord {
     @Column(nullable = false, precision = 19, scale = 4)
     private BigDecimal amount;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 3)
-    private String currency;
+    private CurrencyCode currency;
 
     @Column(nullable = false)
     private LocalDate periodStart;
@@ -50,7 +53,7 @@ public class CostRecord {
 
     public CostRecord(
             BigDecimal amount,
-            String currency,
+            CurrencyCode currency,
             LocalDate periodStart,
             LocalDate periodEnd,
             CloudResource cloudResource) {
@@ -75,7 +78,7 @@ public class CostRecord {
         return amount;
     }
 
-    public String getCurrency() {
+    public CurrencyCode getCurrency() {
         return currency;
     }
 
@@ -97,10 +100,6 @@ public class CostRecord {
 
     public void setAmount(BigDecimal amount) {
         this.amount = amount;
-    }
-
-    public void setCurrency(String currency) {
-        this.currency = currency;
     }
 
     public void setPeriodStart(LocalDate periodStart) {
