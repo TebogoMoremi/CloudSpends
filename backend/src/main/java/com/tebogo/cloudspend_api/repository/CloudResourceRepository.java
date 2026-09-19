@@ -10,4 +10,5 @@ public interface CloudResourceRepository
         extends JpaRepository<CloudResource, Long> {
 
     List<CloudResource> findByCloudAccountId(Long cloudAccountId);
+    long countByCloudAccountId(Long cloudAccountId);
 }

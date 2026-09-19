@@ -15,7 +15,7 @@ import com.tebogo.cloudspend_api.model.CurrencyCode;
 import com.tebogo.cloudspend_api.repository.CloudAccountRepository;
 import com.tebogo.cloudspend_api.repository.CloudResourceRepository;
 import com.tebogo.cloudspend_api.repository.CostRecordRepository;
-
+import com.tebogo.cloudspend_api.dto.ResourceTypeCostResponse;
 @Service
 public class CostRecordService {
 
@@ -141,4 +141,34 @@ public class CostRecordService {
                 .map(CostRecord::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
+    public List<ResourceTypeCostResponse> getCostBreakdownByResourceType(
+        Long accountId,
+        CurrencyCode currency,
+        LocalDate startDate,
+        LocalDate endDate) {
+
+    if (!cloudAccountRepository.existsById(accountId)) {
+        throw new CloudAccountNotFoundException(accountId);
+    }
+
+    if (endDate.isBefore(startDate)) {
+        throw new IllegalArgumentException(
+                "End date cannot be before start date"
+        );
+    }
+
+    return costRecordRepository
+            .findCostBreakdownByResourceType(
+                    accountId,
+                    currency,
+                    startDate,
+                    endDate
+            )
+            .stream()
+            .map(result -> new ResourceTypeCostResponse(
+                    result.getResourceType(),
+                    result.getCost()
+            ))
+            .toList();
+}
 }
