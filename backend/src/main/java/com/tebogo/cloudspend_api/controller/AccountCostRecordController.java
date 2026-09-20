@@ -1,6 +1,7 @@
 package com.tebogo.cloudspend_api.controller;
 
 import java.time.LocalDate;
+import java.util.List;
 
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -9,24 +10,24 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.tebogo.cloudspend_api.dto.DashboardSummaryResponse;
+import com.tebogo.cloudspend_api.dto.AccountCostRecordResponse;
 import com.tebogo.cloudspend_api.model.CurrencyCode;
-import com.tebogo.cloudspend_api.service.DashboardService;
+import com.tebogo.cloudspend_api.service.CostRecordService;
 
 @RestController
-@RequestMapping("/api/cloud-accounts/{accountId}/dashboard")
-public class DashboardController {
+@RequestMapping("/api/cloud-accounts/{accountId}/costs")
+public class AccountCostRecordController {
 
-    private final DashboardService dashboardService;
+    private final CostRecordService costRecordService;
 
-    public DashboardController(
-            DashboardService dashboardService) {
+    public AccountCostRecordController(
+            CostRecordService costRecordService) {
 
-        this.dashboardService = dashboardService;
+        this.costRecordService = costRecordService;
     }
 
-    @GetMapping
-    public DashboardSummaryResponse getDashboard(
+    @GetMapping("/records")
+    public List<AccountCostRecordResponse> getCostRecords(
             @PathVariable Long accountId,
             @RequestParam CurrencyCode currency,
 
@@ -38,7 +39,7 @@ public class DashboardController {
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
             LocalDate endDate) {
 
-        return dashboardService.getSummary(
+        return costRecordService.getAccountCostRecords(
                 accountId,
                 currency,
                 startDate,
