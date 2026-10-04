@@ -115,6 +115,35 @@
             <artifactId>spring-boot-starter-webmvc-test</artifactId>
             <scope>test</scope>
         </dependency>
+		<dependency>
+    <groupId>software.amazon.awssdk</groupId>
+    <artifactId>ec2</artifactId>
+    <version>${aws.sdk.version}</version>
+</dependency>
+<!--
+    Supports AWS CLI login-session credentials
+    used by the default AWS profile.
+-->
+<dependency>
+    <groupId>software.amazon.awssdk</groupId>
+    <artifactId>signin</artifactId>
+    <version>${aws.sdk.version}</version>
+</dependency>
+<!-- ========================= -->
+<!-- AWS SDK                   -->
+<!-- ========================= -->
+
+<dependency>
+    <groupId>software.amazon.awssdk</groupId>
+    <artifactId>ec2</artifactId>
+    <version>${aws.sdk.version}</version>
+</dependency>
+
+<dependency>
+    <groupId>software.amazon.awssdk</groupId>
+    <artifactId>signin</artifactId>
+    <version>${aws.sdk.version}</version>
+</dependency>
 
     </dependencies>
 
