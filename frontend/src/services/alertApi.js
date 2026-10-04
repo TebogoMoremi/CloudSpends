@@ -6,9 +6,7 @@ export async function getAlerts(accountId) {
   );
 
   if (!response.ok) {
-    throw new Error(
-      `Failed to load alerts: ${response.status}`
-    );
+    throw new Error("Failed to load alerts");
   }
 
   return response.json();
@@ -20,9 +18,7 @@ export async function getOpenAlerts(accountId) {
   );
 
   if (!response.ok) {
-    throw new Error(
-      `Failed to load open alerts: ${response.status}`
-    );
+    throw new Error("Failed to load open alerts");
   }
 
   return response.json();
@@ -46,9 +42,7 @@ export async function evaluateAlerts(
   );
 
   if (!response.ok) {
-    throw new Error(
-      `Failed to evaluate alerts: ${response.status}`
-    );
+    throw new Error("Failed to evaluate alerts");
   }
 
   return response.json();
@@ -66,9 +60,7 @@ export async function resolveAlert(
   );
 
   if (!response.ok) {
-    throw new Error(
-      `Failed to resolve alert: ${response.status}`
-    );
+    throw new Error("Failed to resolve alert");
   }
 
   return response.json();

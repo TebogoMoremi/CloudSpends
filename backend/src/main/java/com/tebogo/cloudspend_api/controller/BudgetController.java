@@ -18,6 +18,10 @@ import com.tebogo.cloudspend_api.dto.BudgetResponse;
 import com.tebogo.cloudspend_api.dto.BudgetUtilizationResponse;
 import com.tebogo.cloudspend_api.dto.CreateBudgetRequest;
 import com.tebogo.cloudspend_api.service.BudgetService;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+
+import com.tebogo.cloudspend_api.model.BudgetStatus;
 
 import jakarta.validation.Valid;
 
@@ -73,4 +77,16 @@ public class BudgetController {
                 endDate
         );
     }
+    @PatchMapping("/{budgetId}/status")
+public BudgetResponse updateBudgetStatus(
+        @PathVariable Long accountId,
+        @PathVariable Long budgetId,
+        @RequestParam BudgetStatus status) {
+
+    return budgetService.updateBudgetStatus(
+            accountId,
+            budgetId,
+            status
+    );
+}
 }

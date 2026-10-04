@@ -370,4 +370,17 @@ public class CostAlertService {
             );
         }
     }
+    @Transactional
+public void resolveOpenAlertsForBudget(Long budgetId) {
+
+    resolveOpenAlert(
+            budgetId,
+            AlertType.BUDGET_THRESHOLD
+    );
+
+    resolveOpenAlert(
+            budgetId,
+            AlertType.BUDGET_EXCEEDED
+    );
+}
 }

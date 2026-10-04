@@ -106,4 +106,8 @@ public class Budget {
     public Instant getCreatedAt() {
         return createdAt;
     }
+
+    public void setStatus(BudgetStatus status) {
+    this.status = status;
+}
 }

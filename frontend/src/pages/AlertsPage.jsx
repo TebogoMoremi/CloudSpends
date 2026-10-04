@@ -1,12 +1,12 @@
-import { useEffect, useState } from "react";
-
-import { useAccount } from "../context/AccountContext";
+import { useEffect, useMemo, useState } from "react";
 
 import {
   evaluateAlerts,
   getAlerts,
   resolveAlert,
 } from "../services/alertApi";
+
+import { useAccount } from "../context/AccountContext";
 
 function AlertsPage() {
   const {
@@ -17,10 +17,8 @@ function AlertsPage() {
 
   const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [evaluating, setEvaluating] =
-    useState(false);
-  const [resolvingId, setResolvingId] =
-    useState(null);
+  const [evaluating, setEvaluating] = useState(false);
+  const [resolvingId, setResolvingId] = useState(null);
   const [error, setError] = useState("");
 
   const [startDate, setStartDate] =
@@ -40,12 +38,17 @@ function AlertsPage() {
       setLoading(true);
       setError("");
 
-      const data =
-        await getAlerts(selectedAccountId);
+      const data = await getAlerts(
+        selectedAccountId
+      );
 
       setAlerts(data);
     } catch (err) {
-      setError(err.message);
+      console.error(err);
+
+      setError(
+        err.message || "Failed to load alerts."
+      );
     } finally {
       setLoading(false);
     }
@@ -60,10 +63,6 @@ function AlertsPage() {
   async function handleEvaluate(event) {
     event.preventDefault();
 
-    if (!selectedAccountId) {
-      return;
-    }
-
     if (endDate < startDate) {
       setError(
         "End date cannot be before start date."
@@ -75,15 +74,19 @@ function AlertsPage() {
       setEvaluating(true);
       setError("");
 
-      const data = await evaluateAlerts(
+      await evaluateAlerts(
         selectedAccountId,
         startDate,
         endDate
       );
 
-      setAlerts(data);
+      await loadAlerts();
     } catch (err) {
-      setError(err.message);
+      console.error(err);
+
+      setError(
+        err.message || "Failed to evaluate alerts."
+      );
     } finally {
       setEvaluating(false);
     }
@@ -101,45 +104,74 @@ function AlertsPage() {
 
       await loadAlerts();
     } catch (err) {
-      setError(err.message);
+      console.error(err);
+
+      setError(
+        err.message || "Failed to resolve alert."
+      );
     } finally {
       setResolvingId(null);
     }
   }
 
-  function formatDate(dateValue) {
-    if (!dateValue) {
+  const stats = useMemo(() => {
+    return {
+      open: alerts.filter(
+        (alert) => alert.status === "OPEN"
+      ).length,
+
+      warning: alerts.filter(
+        (alert) =>
+          alert.status === "OPEN" &&
+          alert.severity === "WARNING"
+      ).length,
+
+      critical: alerts.filter(
+        (alert) =>
+          alert.status === "OPEN" &&
+          alert.severity === "CRITICAL"
+      ).length,
+
+      resolved: alerts.filter(
+        (alert) => alert.status === "RESOLVED"
+      ).length,
+    };
+  }, [alerts]);
+
+  function formatDateTime(value) {
+    if (!value) {
       return "—";
     }
 
-    return new Date(dateValue).toLocaleString();
+    return new Date(value).toLocaleString(
+      "en-ZA",
+      {
+        dateStyle: "medium",
+        timeStyle: "short",
+      }
+    );
   }
 
-  const openAlerts =
-    alerts.filter(
-      (alert) => alert.status === "OPEN"
-    );
+  function formatAlertType(type) {
+    if (!type) {
+      return "Unknown";
+    }
 
-  const warningCount =
-    openAlerts.filter(
-      (alert) => alert.severity === "WARNING"
-    ).length;
-
-  const criticalCount =
-    openAlerts.filter(
-      (alert) => alert.severity === "CRITICAL"
-    ).length;
-
-  const resolvedCount =
-    alerts.filter(
-      (alert) => alert.status === "RESOLVED"
-    ).length;
+    return type
+      .split("_")
+      .map(
+        (word) =>
+          word.charAt(0) +
+          word.slice(1).toLowerCase()
+      )
+      .join(" ");
+  }
 
   if (accountsLoading) {
     return (
       <main className="main-content">
         <div className="state-message">
-          Loading cloud accounts...
+          Loading CloudSpend...
         </div>
       </main>
     );
@@ -163,14 +195,59 @@ function AlertsPage() {
             Monitoring
           </p>
 
-          <h1>Alerts</h1>
+          <h1>Cost Alerts</h1>
 
           <p className="subtitle">
             {selectedAccount
               ? `${selectedAccount.accountName} · ${selectedAccount.provider} · ${selectedAccount.region}`
-              : "Monitor cloud spending alerts."}
+              : "Monitor budget thresholds and cloud spending."}
           </p>
         </div>
+
+        <form
+          className="date-filter"
+          onSubmit={handleEvaluate}
+        >
+          <div className="date-field">
+            <label htmlFor="alertStartDate">
+              Start date
+            </label>
+
+            <input
+              id="alertStartDate"
+              type="date"
+              value={startDate}
+              onChange={(event) =>
+                setStartDate(event.target.value)
+              }
+            />
+          </div>
+
+          <div className="date-field">
+            <label htmlFor="alertEndDate">
+              End date
+            </label>
+
+            <input
+              id="alertEndDate"
+              type="date"
+              value={endDate}
+              onChange={(event) =>
+                setEndDate(event.target.value)
+              }
+            />
+          </div>
+
+          <button
+            className="apply-button"
+            type="submit"
+            disabled={evaluating || loading}
+          >
+            {evaluating
+              ? "Evaluating..."
+              : "Evaluate Alerts"}
+          </button>
+        </form>
       </header>
 
       {error && (
@@ -179,51 +256,6 @@ function AlertsPage() {
         </div>
       )}
 
-      <form
-        className="date-filter alert-date-filter"
-        onSubmit={handleEvaluate}
-      >
-        <div className="date-field">
-          <label htmlFor="alertStartDate">
-            Start date
-          </label>
-
-          <input
-            id="alertStartDate"
-            type="date"
-            value={startDate}
-            onChange={(event) =>
-              setStartDate(event.target.value)
-            }
-          />
-        </div>
-
-        <div className="date-field">
-          <label htmlFor="alertEndDate">
-            End date
-          </label>
-
-          <input
-            id="alertEndDate"
-            type="date"
-            value={endDate}
-            onChange={(event) =>
-              setEndDate(event.target.value)
-            }
-          />
-        </div>
-
-        <button
-          className="apply-button"
-          type="submit"
-          disabled={evaluating}
-        >
-          {evaluating
-            ? "Evaluating..."
-            : "Evaluate Budgets"}
-        </button>
-      </form>
-
       <section className="cards">
         <article className="card">
           <div className="card-heading">
@@ -231,18 +263,20 @@ function AlertsPage() {
             <span className="card-icon">!</span>
           </div>
 
-          <h2>{openAlerts.length}</h2>
-          <p>Require attention</p>
+          <h2>{stats.open}</h2>
+
+          <p>Alerts requiring attention</p>
         </article>
 
         <article className="card">
           <div className="card-heading">
             <span>Warnings</span>
-            <span className="card-icon">⚠</span>
+            <span className="card-icon">△</span>
           </div>
 
-          <h2>{warningCount}</h2>
-          <p>Budget thresholds reached</p>
+          <h2>{stats.warning}</h2>
+
+          <p>Open budget warnings</p>
         </article>
 
         <article className="card">
@@ -251,8 +285,9 @@ function AlertsPage() {
             <span className="card-icon">!</span>
           </div>
 
-          <h2>{criticalCount}</h2>
-          <p>Budgets exceeded</p>
+          <h2>{stats.critical}</h2>
+
+          <p>Budgets requiring action</p>
         </article>
 
         <article className="card">
@@ -261,114 +296,132 @@ function AlertsPage() {
             <span className="card-icon">✓</span>
           </div>
 
-          <h2>{resolvedCount}</h2>
-          <p>Historical alerts</p>
+          <h2>{stats.resolved}</h2>
+
+          <p>Previously resolved alerts</p>
         </article>
       </section>
 
-      <section className="panel resources-panel">
+      <section className="panel">
         <div className="panel-header">
           <div>
             <h3>Alert History</h3>
 
             <p>
-              Budget monitoring events for{" "}
-              {selectedAccount?.accountName}.
+              Budget threshold and exceeded
+              notifications
             </p>
           </div>
+
+          <span className="currency-badge">
+            {alerts.length} Alerts
+          </span>
         </div>
 
         {loading ? (
-          <div className="table-message">
+          <div className="state-message">
             Loading alerts...
           </div>
         ) : alerts.length === 0 ? (
-          <div className="table-message">
+          <div className="state-message">
             No alerts found for this account.
           </div>
         ) : (
-          <div className="alerts-list">
-            {alerts.map((alert) => (
-              <article
-                className={`alert-item alert-${alert.severity.toLowerCase()}`}
-                key={alert.id}
-              >
-                <div className="alert-indicator">
-                  {alert.severity === "CRITICAL"
-                    ? "!"
-                    : "⚠"}
-                </div>
+          <div className="table-wrapper">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Severity</th>
+                  <th>Alert</th>
+                  <th>Budget</th>
+                  <th>Status</th>
+                  <th>Created</th>
+                  <th>Resolved</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
 
-                <div className="alert-content">
-                  <div className="alert-heading">
-                    <div>
-                      <h3>{alert.title}</h3>
-
-                      <p className="alert-budget">
-                        {alert.budgetName}
-                      </p>
-                    </div>
-
-                    <div className="alert-badges">
+              <tbody>
+                {alerts.map((alert) => (
+                  <tr key={alert.id}>
+                    <td>
                       <span
-                        className={`severity-badge severity-${alert.severity.toLowerCase()}`}
+                        className={`alert-severity ${alert.severity?.toLowerCase()}`}
                       >
                         {alert.severity}
                       </span>
+                    </td>
 
+                    <td>
+                      <div className="alert-description">
+                        <strong>
+                          {alert.title}
+                        </strong>
+
+                        <span>
+                          {formatAlertType(
+                            alert.alertType
+                          )}
+                        </span>
+
+                        <small>
+                          {alert.message}
+                        </small>
+                      </div>
+                    </td>
+
+                    <td>
+                      {alert.budgetName}
+                    </td>
+
+                    <td>
                       <span
-                        className={`status-badge status-${alert.status.toLowerCase()}`}
+                        className={`alert-status ${alert.status?.toLowerCase()}`}
                       >
                         {alert.status}
                       </span>
-                    </div>
-                  </div>
+                    </td>
 
-                  <p className="alert-message">
-                    {alert.message}
-                  </p>
-
-                  <div className="alert-meta">
-                    <span>
-                      Type: {alert.alertType}
-                    </span>
-
-                    <span>
-                      Created:{" "}
-                      {formatDate(
+                    <td>
+                      {formatDateTime(
                         alert.createdAt
                       )}
-                    </span>
+                    </td>
 
-                    {alert.resolvedAt && (
-                      <span>
-                        Resolved:{" "}
-                        {formatDate(
-                          alert.resolvedAt
-                        )}
-                      </span>
-                    )}
-                  </div>
-                </div>
+                    <td>
+                      {formatDateTime(
+                        alert.resolvedAt
+                      )}
+                    </td>
 
-                {alert.status === "OPEN" && (
-                  <button
-                    type="button"
-                    className="secondary-button resolve-button"
-                    onClick={() =>
-                      handleResolve(alert.id)
-                    }
-                    disabled={
-                      resolvingId === alert.id
-                    }
-                  >
-                    {resolvingId === alert.id
-                      ? "Resolving..."
-                      : "Resolve"}
-                  </button>
-                )}
-              </article>
-            ))}
+                    <td>
+                      {alert.status === "OPEN" ? (
+                        <button
+                          className="resolve-alert-button"
+                          type="button"
+                          disabled={
+                            resolvingId === alert.id
+                          }
+                          onClick={() =>
+                            handleResolve(
+                              alert.id
+                            )
+                          }
+                        >
+                          {resolvingId === alert.id
+                            ? "Resolving..."
+                            : "Resolve"}
+                        </button>
+                      ) : (
+                        <span className="resolved-text">
+                          Resolved
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </section>

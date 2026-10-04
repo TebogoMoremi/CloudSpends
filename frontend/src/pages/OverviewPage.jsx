@@ -1,7 +1,11 @@
 import { useEffect, useState } from "react";
 
 import { getDashboardSummary } from "../services/dashboardApi";
+import { getCostTrend } from "../services/analyticsApi";
+
 import CostBreakdownChart from "../components/CostBreakdownChart";
+import CostTrendChart from "../components/CostTrendChart";
+
 import { useAccount } from "../context/AccountContext";
 
 function OverviewPage() {
@@ -12,11 +16,16 @@ function OverviewPage() {
   } = useAccount();
 
   const [dashboard, setDashboard] = useState(null);
+  const [costTrend, setCostTrend] = useState(null);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const [startDate, setStartDate] = useState("2026-09-01");
-  const [endDate, setEndDate] = useState("2026-09-30");
+  const [startDate, setStartDate] =
+    useState("2026-09-01");
+
+  const [endDate, setEndDate] =
+    useState("2026-09-30");
 
   async function loadDashboard() {
     if (!selectedAccountId) {
@@ -28,16 +37,32 @@ function OverviewPage() {
       setLoading(true);
       setError("");
 
-      const data = await getDashboardSummary(
-        selectedAccountId,
-        "USD",
-        startDate,
-        endDate
-      );
+      const [dashboardData, trendData] =
+        await Promise.all([
+          getDashboardSummary(
+            selectedAccountId,
+            "USD",
+            startDate,
+            endDate
+          ),
 
-      setDashboard(data);
+          getCostTrend(
+            selectedAccountId,
+            "USD",
+            startDate,
+            endDate
+          ),
+        ]);
+
+      setDashboard(dashboardData);
+      setCostTrend(trendData);
     } catch (err) {
-      setError(err.message);
+      console.error(err);
+
+      setError(
+        err.message ||
+          "Failed to load CloudSpend dashboard."
+      );
     } finally {
       setLoading(false);
     }
@@ -47,6 +72,7 @@ function OverviewPage() {
     if (selectedAccountId) {
       loadDashboard();
     }
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedAccountId]);
 
@@ -54,14 +80,33 @@ function OverviewPage() {
     event.preventDefault();
 
     if (endDate < startDate) {
-      setError("End date cannot be before start date.");
+      setError(
+        "End date cannot be before start date."
+      );
       return;
     }
 
     loadDashboard();
   }
 
-  if (accountsLoading || (!dashboard && loading)) {
+  function formatDate(date) {
+    if (!date) {
+      return "N/A";
+    }
+
+    return new Date(
+      `${date}T00:00:00`
+    ).toLocaleDateString("en-ZA", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  }
+
+  if (
+    accountsLoading ||
+    (!dashboard && loading)
+  ) {
     return (
       <main className="main-content">
         <div className="state-message">
@@ -168,11 +213,52 @@ function OverviewPage() {
           </div>
 
           <h2>
-            ${Number(dashboard.totalCost).toFixed(2)}
+            ${Number(
+              costTrend?.totalCost ??
+                dashboard.totalCost
+            ).toFixed(2)}
           </h2>
 
           <p>
             {dashboard.currency} for selected period
+          </p>
+        </article>
+
+        <article className="card">
+          <div className="card-heading">
+            <span>Average Daily Cost</span>
+            <span className="card-icon">~</span>
+          </div>
+
+          <h2>
+            $
+            {Number(
+              costTrend?.averageDailyCost ?? 0
+            ).toFixed(2)}
+          </h2>
+
+          <p>
+            Average spend per day
+          </p>
+        </article>
+
+        <article className="card">
+          <div className="card-heading">
+            <span>Highest Cost Day</span>
+            <span className="card-icon">↑</span>
+          </div>
+
+          <h2>
+            $
+            {Number(
+              costTrend?.highestDailyCost ?? 0
+            ).toFixed(2)}
+          </h2>
+
+          <p>
+            {formatDate(
+              costTrend?.highestCostDate
+            )}
           </p>
         </article>
 
@@ -190,24 +276,35 @@ function OverviewPage() {
             Resources being monitored
           </p>
         </article>
-
-        <article className="card">
-          <div className="card-heading">
-            <span>Top Service</span>
-            <span className="card-icon">↑</span>
-          </div>
-
-          <h2>
-            {dashboard.topResourceType ?? "N/A"}
-          </h2>
-
-          <p>
-            Highest spending resource type
-          </p>
-        </article>
       </section>
 
       <section className="dashboard-grid">
+        <article className="panel">
+          <div className="panel-header">
+            <div>
+              <h3>
+                Daily Cost Trend
+              </h3>
+
+              <p>
+                {dashboard.startDate} →{" "}
+                {dashboard.endDate}
+              </p>
+            </div>
+
+            <span className="currency-badge">
+              {dashboard.currency}
+            </span>
+          </div>
+
+          <CostTrendChart
+            dailyCosts={
+              costTrend?.dailyCosts ?? []
+            }
+            currency={dashboard.currency}
+          />
+        </article>
+
         <article className="panel">
           <div className="panel-header">
             <div>
@@ -216,7 +313,7 @@ function OverviewPage() {
               </h3>
 
               <p>
-                {dashboard.startDate} → {dashboard.endDate}
+                Spending by resource type
               </p>
             </div>
 
@@ -249,7 +346,8 @@ function OverviewPage() {
               <span>Account</span>
 
               <strong>
-                {selectedAccount?.accountName ?? "N/A"}
+                {selectedAccount?.accountName ??
+                  "N/A"}
               </strong>
             </div>
 
@@ -265,7 +363,32 @@ function OverviewPage() {
               <span>Total cost</span>
 
               <strong>
-                ${Number(dashboard.totalCost).toFixed(2)}
+                $
+                {Number(
+                  costTrend?.totalCost ??
+                    dashboard.totalCost
+                ).toFixed(2)}
+              </strong>
+            </div>
+
+            <div>
+              <span>Average daily cost</span>
+
+              <strong>
+                $
+                {Number(
+                  costTrend?.averageDailyCost ?? 0
+                ).toFixed(2)}
+              </strong>
+            </div>
+
+            <div>
+              <span>Highest cost day</span>
+
+              <strong>
+                {formatDate(
+                  costTrend?.highestCostDate
+                )}
               </strong>
             </div>
 
@@ -278,10 +401,11 @@ function OverviewPage() {
             </div>
 
             <div>
-              <span>Highest spend</span>
+              <span>Highest spend service</span>
 
               <strong>
-                {dashboard.topResourceType ?? "N/A"}
+                {dashboard.topResourceType ??
+                  "N/A"}
               </strong>
             </div>
           </div>
